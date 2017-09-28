@@ -19,8 +19,8 @@ def objective_value(w,x,y,C,lambda_):
     for i in range(n):
         for j in range(C):
             loss_2 += pow(loss_function_wj(w[j],x[i],y[i],j+1),2)
-    loss_2 *= lambda_/n
 
+    loss_2 *= lambda_/n
     return loss_1 + loss_2
 
 def loss_function_wj(w,x,y,j):
@@ -59,44 +59,80 @@ def pred(w,x):
 
 def acc(y,y_true): 
     return np.sum(y==y_true.transpose())*1.0/len(y_true)*100.0
+    
+def plotting(x,y,lambdas,title):
+    plt.figure()
+    plt.title(title)
+    plt.xlabel('Epoch')
+    for i in range(len(lambdas)):
+        plt.plot(x,y[i], linewidth = 2, label = 'Lambda = ' + str(lambdas[i]))
+    plt.legend()
 
 def main():
-    temp_X = readFile("train_features.csv");
-    temp_Y = readFile("train_labels.csv");
-    train_X = np.array(temp_X).astype('double');
-    train_Y = np.array(temp_Y).astype('int');
+
+    print "Reading Files ..."
+    train_X = np.array(readFile("train_features.csv")).astype('double');
+    train_Y = np.array(readFile("train_labels.csv")).astype('double');
+    test_X = np.array(readFile("test_features.csv")).astype('double');
+    test_Y = np.array(readFile("test_labels.csv")).astype('double');
 
     C = max(train_Y);
     n = len(train_X);       # number of data
     m = train_X.shape[1];   # size of feature
-    print "n: " + str(n);
-    print "m: " + str(m);
 
     learning_rate = 0.005;
-    lambda_ = 0.1;
+    lambda_all = [0.1, 0.5, 1.0, 10.0];
     epoch = 200;
     batch_size = 5000;
 
-    w = np.zeros(shape=(m,C));
-    print "== Initial loss: " + str(objective_value(w.transpose(),train_X,train_Y,C,lambda_))
-    mini_train_X = train_X.copy()
-    mini_train_Y = train_Y.copy()
+    obj_value = []
+    train_acc = []
+    test_acc = []
 
-    for k in range(epoch):
-        random_ind = np.random.permutation(batch_size)
-        batch_X = mini_train_X[random_ind]
-        batch_Y = mini_train_Y[random_ind]
-        for j in range(C):
-            param_grad = evaluate_gradient(w.transpose(),batch_X,batch_Y,C,lambda_,j)
-            w.transpose()[j] = w.transpose()[j] - learning_rate * param_grad
+    for lambda_ in lambda_all:
+        w = np.zeros(shape=(m,C));
+        mini_train_X = train_X.copy()
+        mini_train_Y = train_Y.copy()
 
-        print " -> Epoch " + str(k) + " with loss " + str(objective_value(w.transpose(),train_X,train_Y,C,lambda_))
-        pred_y = np.array(pred(w,train_X))
-        print acc(pred_y,train_Y)
+        obj_value_lambda = []
+        train_acc_lambda = []
+        test_acc_lambda = []
+
+        for k in range(epoch):
+            random_ind = np.random.permutation(batch_size)
+            batch_X = mini_train_X[random_ind]
+            batch_Y = mini_train_Y[random_ind]
+            for j in range(C):
+                param_grad = evaluate_gradient(w.transpose(),batch_X,batch_Y,C,lambda_,j)
+                w.transpose()[j] = w.transpose()[j] - learning_rate * param_grad
+
+            obj_value_lambda += [objective_value(w.transpose(), train_X, train_Y, C, lambda_)]
+            test_acc_lambda += [acc(pred(w,test_X),test_Y)]
+            train_acc_lambda += [acc(pred(w,train_X),train_Y)]
+            print "-> Lambda:" + str(lambda_) + " Epoch: " + str(k+1) + " ======== Obj value: " + str(obj_value_lambda[-1])+\
+                " Train acc: " + str(train_acc_lambda[-1]) + " Test acc: " + str(test_acc_lambda[-1])
+
+        obj_value += [obj_value_lambda]
+        test_acc += [test_acc_lambda]
+        train_acc += [train_acc_lambda]
+
+
+        
+    print "Plotting ..."
+    epoch_plt = [x+1 for x in range(epoch)]
+    for i in range(len(obj_value)):
+        plt.figure()
+        testacc = plt.plot(epoch_plt, test_acc[i],linewidth = 2,label='Test Accuracy')
+        trainacc = plt.plot(epoch_plt, train_acc[i],linewidth = 2,label='Train Accuracy')
+        plt.legend()
+        plt.title('Lambda '+str(lambda_all[i]))
+
+    plotting(epoch_plt, obj_value, lambda_all, 'Objective value vs. lambda')
+    plotting(epoch_plt, test_acc, lambda_all, 'Test accuracy vs. lambda')
+    plotting(epoch_plt, train_acc, lambda_all, 'Train accuracy vs. lambda')
+    plotting(epoch_plt, obj_value[0:-1], lambda_all[0:-1], 'Objective value vs. lambda')
+    plt.show()
 
 if __name__ == '__main__':
     main()
-    
-
-
 
