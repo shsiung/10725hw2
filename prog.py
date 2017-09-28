@@ -38,13 +38,17 @@ def evaluate_gradient(w,x,y,C,lambda_,j_):
     grad_2 = np.zeros(shape=(m))
     grad_2_scale = 0;
     for i in range(n):
-        dgrad_2_scale = 0;
-        grad_2_scale += loss_function_wj(w[j],x[i],y[i],j+1)
+        grad_2_scale = loss_function_wj(w[j_],x[i],y[i],j_+1)
 
-        if y[i]==j_+1:
-            grad_2 += grad_2_scale * np.maximum(zeros, [ -x_i for x_i in x[i].tolist()])
+        if y[i] == j_+1:
+            condition = np.dot(w[j_],x[i])
         else:
-            grad_2 += grad_2_scale * np.maximum(zeros, x[i].tolist())
+            condition = -np.dot(w[j_],x[i])
+        if condition<=1:
+            if y[i]==j_+1:
+                grad_2 += grad_2_scale * np.array([ -x_i for x_i in x[i].tolist()])
+            else:
+                grad_2 += grad_2_scale * x[i]
 
     grad_2 *= 2.0*lambda_/n
 
@@ -70,18 +74,18 @@ def main():
 
     learning_rate = 0.005;
     lambda_ = 0.1;
-    epoch = 20;
+    epoch = 200;
 
     w = np.zeros(shape=(m,C));
     print "== Initial loss: " + str(objective_value(w.transpose(),train_X,train_Y,C,lambda_))
-    mini_train_X = train_X
-    mini_train_Y = train_Y
+    mini_train_X = train_X.copy()
+    mini_train_Y = train_Y.copy()
 
     for k in range(epoch):
-        np.random.shuffle(mini_train_X)
-        np.random.shuffle(mini_train_Y)
-        batch_X = mini_train_X[0:5000]
-        batch_Y = mini_train_Y[0:5000]
+        #np.random.shuffle(mini_train_X)
+        #np.random.shuffle(mini_train_Y)
+        batch_X = mini_train_X
+        batch_Y = mini_train_Y
         for j in range(C):
             param_grad = evaluate_gradient(w.transpose(),batch_X,batch_Y,C,lambda_,j)
             w.transpose()[j] = w.transpose()[j] - learning_rate * param_grad
