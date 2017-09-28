@@ -11,73 +11,84 @@ def readFile(filename):
         vectors += [line[0:len(line)]]
     return vectors
 
-def loss_function(w,x,y,C,lambda_):
-    m = x.shape[1]-1;
-    loss_1 = 0;
+def objective_value(w,x,y,C,lambda_):
+    m = x.shape[1];
+    n = x.shape[0];
+    loss_1 = 1.0/2*np.sum(w*w)
     loss_2 = 0;
-
-    for j in range(C):
-        loss_1 += np.dot(w.transpose()[j],w.transpose()[j])
-    loss_1 *= 1/2
 
     for i in range(len(x)):
         for j in range(C):
-            if y[i] == j+1:
-                loss_2 += max(0,1-(np.dot(w.transpose()[j], x[i][0:m])+x[i][-1]))
-            else:
-                loss_2 += max(0,1+(np.dot(w.transpose()[j], x[i][0:m])+x[i][-1]))
-    loss_2 *= lambda_/m
-
+            loss_2 += pow(loss_function_wj(w.transpose()[j],x[i],y[i],j+1),2)
+    loss_2 *= lambda_/n
 
     return loss_1 + loss_2
 
-def evaluate_gradient(w,x,y,C,lambda_):
-    m = x.shape[1]-1;
-    grad_1 = np.zeros(shape=(m))
-    grad_2 = np.zeros(shape=(m))
+def loss_function_wj(w,x,y,j):
+    if y == j:
+        return np.maximum(0,1-np.dot(w,x))
+    else:
+        return np.maximum(0,1+np.dot(w,x))
+
+def evaluate_gradient(w,x,y,C,lambda_,j_):
+    m = x.shape[1];
+    n = x.shape[0];
     zeros = np.zeros(shape=(m)).tolist()
-    ones = np.ones(shape=(m)).tolist()
-    for j in range(C):
-        grad_1 += w[j]
 
+    grad_1 = w[j_]
+    print grad_1.shape
+    grad_2 = np.zeros(shape=(m))
+    grad_2_scale = 0;
     for i in range(len(x)):
+        grad_2_scale = 0;
         for j in range(C):
-            xi_list = x[i][0:m].tolist()
-            if y[i]==j+1:
-                grad_2+=np.multiply(np.asarray(max( np.zeros(shape=(m)).tolist() , [a_i-b_i for a_i, b_i in zip(ones,xi_list)] ))
-                                              ,max(0,1-(np.dot(w[j], x[i][0:m])+x[i][-1])))
-            else:
-                grad_2+=np.multiply(np.asarray(max( np.zeros(shape=(m)).tolist() , [a_i+b_i for a_i, b_i in zip(ones,xi_list)] ))
-                                              ,max(0,1+(np.dot(w[j], x[i][0:m])+x[i][-1])))
+            grad_2_scale += loss_function_wj(w[j],x[i],y[i],j+1)
 
-    grad_2 *= 2*lambda_/m
+        if y[i]==j_+1:
+            grad_2 += grad_2_scale * np.maximum(zeros, [ -x_i for x_i in x[i].tolist()])
+        else:
+            grad_2 += grad_2_scale * np.maximum(zeros, x[i].tolist())
+
+    grad_2 *= 2.0*lambda_/n
 
     return grad_1+grad_2
+
+def pred(w,x):
+    return map(lambda y: np.argmax(w.transpose().dot(y))+1, x) 
+
+def acc(y,y_true): 
+    return np.sum(y==y_true.transpose())*1.0/len(y_true)*100.0
 
 def main():
     temp_X = readFile("train_features.csv");
     temp_Y = readFile("train_labels.csv");
     train_X = np.array(temp_X).astype('double');
-    train_Y = np.array(temp_Y).astype('double');
-    C = max(train_Y);
+    train_Y = np.array(temp_Y).astype('int');
 
+    C = max(train_Y);
     n = len(train_X)        # number of data
-    m = train_X.shape[1]-1; # size of feature
+    m = train_X.shape[1]; # size of feature
+
     learning_rate = 0.005;
     lambda_ = 0.1;
     epoch = 20;
-    w = np.zeros(shape=(m,C));
-    print loss_function(w,train_X,train_Y,C,lambda_)/m
 
-    batch_X = train_X[0:10];
-    batch_Y = train_Y[0:10];
+    w = np.zeros(shape=(m,C));
+    print "== Initial loss: " + str(objective_value(w,train_X,train_Y,C,lambda_))
+
+    batch_X = train_X[0:20];
+    batch_Y = train_Y[0:20];
 
     for k in range(epoch):
         for j in range(C):
-            param_grad = evaluate_gradient(w.transpose(),batch_X,batch_Y,C, lambda_)
+            param_grad = evaluate_gradient(w.transpose(),batch_X,batch_Y,C,lambda_,j)
             w.transpose()[j] = w.transpose()[j] - learning_rate * param_grad
 
-        print loss_function(w,train_X,train_Y,C,lambda_)/m
+        print " -> Epoch " + str(k) + " with loss " + str(objective_value(w,train_X,train_Y,C,lambda_))
+        pred_y = np.array(pred(w,train_X))
+        print pred_y[0:10]
+        print train_Y.transpose()[0:10]
+        print acc(pred_y,train_Y)
 
 if __name__ == '__main__':
     main()
