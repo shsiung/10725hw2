@@ -75,6 +75,7 @@ def main():
     learning_rate = 0.005;
     lambda_ = 0.1;
     epoch = 200;
+    batch_size = 5000;
 
     w = np.zeros(shape=(m,C));
     print "== Initial loss: " + str(objective_value(w.transpose(),train_X,train_Y,C,lambda_))
@@ -82,10 +83,9 @@ def main():
     mini_train_Y = train_Y.copy()
 
     for k in range(epoch):
-        #np.random.shuffle(mini_train_X)
-        #np.random.shuffle(mini_train_Y)
-        batch_X = mini_train_X
-        batch_Y = mini_train_Y
+        random_ind = np.random.permutation(batch_size)
+        batch_X = mini_train_X[random_ind]
+        batch_Y = mini_train_Y[random_ind]
         for j in range(C):
             param_grad = evaluate_gradient(w.transpose(),batch_X,batch_Y,C,lambda_,j)
             w.transpose()[j] = w.transpose()[j] - learning_rate * param_grad
