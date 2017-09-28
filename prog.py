@@ -80,8 +80,8 @@ def main():
     n = len(train_X);       # number of data
     m = train_X.shape[1];   # size of feature
 
-    learning_rate = 0.005;
-    lambda_all = [0.1, 0.5, 1.0, 10.0];
+    learning_rate = 0.001;
+    lambda_all = [0.1, 1.0, 30.0, 50.0];
     epoch = 200;
     batch_size = 5000;
 
@@ -99,12 +99,14 @@ def main():
         test_acc_lambda = []
 
         for k in range(epoch):
-            random_ind = np.random.permutation(batch_size)
-            batch_X = mini_train_X[random_ind]
-            batch_Y = mini_train_Y[random_ind]
-            for j in range(C):
-                param_grad = evaluate_gradient(w.transpose(),batch_X,batch_Y,C,lambda_,j)
-                w.transpose()[j] = w.transpose()[j] - learning_rate * param_grad
+            random_ind_total = np.random.permutation(n)
+            g = 0
+            for batch in np.reshape(random_ind_total,(n/batch_size,batch_size)):
+                batch_X = mini_train_X[batch]
+                batch_Y = mini_train_Y[batch]
+                for j in range(C):
+                    param_grad = evaluate_gradient(w.transpose(),batch_X,batch_Y,C,lambda_,j)
+                    w.transpose()[j] = w.transpose()[j] - learning_rate * param_grad
 
             obj_value_lambda += [objective_value(w.transpose(), train_X, train_Y, C, lambda_)]
             test_acc_lambda += [acc(pred(w,test_X),test_Y)]
@@ -115,8 +117,6 @@ def main():
         obj_value += [obj_value_lambda]
         test_acc += [test_acc_lambda]
         train_acc += [train_acc_lambda]
-
-
         
     print "Plotting ..."
     epoch_plt = [x+1 for x in range(epoch)]
